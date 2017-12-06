@@ -99,14 +99,13 @@ class TwoLayerNet(object):
     #############################################################################
     # N, D = X.shape
     C = scores.shape[1]
-
     # Make the softmax function numeric stabily
     max_scores_idx = np.argmax(scores, axis = 1)
-    max_scores = scores(range(N), max_scores_idx)
+    max_scores = scores[range(N), max_scores_idx]
     scores -= max_scores.reshape(N, -1)
     correct_scores = scores[range(N), y]
 
-    expyi = np.e ** correct_class_score  # shape (N, )
+    expyi = np.e ** correct_scores  # shape (N, )
     expj = np.e ** scores  # shape (N, C)
     sum_expj = np.sum(expj, axis=1)  # shape (N, )
     softmax = expyi / sum_expj  # shape (N, )
@@ -115,13 +114,10 @@ class TwoLayerNet(object):
 
     # regularization
     loss /= N
-    loss += 0.5 * reg * np.sum(W * W)
-
-    pass
+    loss += reg * np.sum(W1 * W1) +  reg * np.sum(W2 * W2)
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
-
     # Backward pass: compute gradients
     grads = {}
     #############################################################################
@@ -129,6 +125,33 @@ class TwoLayerNet(object):
     # and biases. Store the results in the grads dictionary. For example,       #
     # grads['W1'] should store the gradient on W1, and be a matrix of same size #
     #############################################################################
+    dsoftmax = -1 / softmax
+    dexpyi = dsoftmax / sum_expj
+    dsum_expj = (-expyi / (sum_expj ** 2)) * dsoftmax
+    dexpj = np.ones_like(expj) * dsum_expj.reshape(N, -1)
+    dscores = expj * dexpj
+    dcorrect_scores = expyi * dexpyi
+
+    # Add dcorrect_scores to dscores
+    extend_dscores = np.zeros_like(dscores)
+    extend_dscores[range(N), y] = dcorrect_scores
+    dscores += extend_dscores
+
+    # Processing scores
+    dW2 = np.dot(H1_output.T, dscores)
+    dH1_output = np.dot(dscores, W2.T)
+    db2 = 1 * np.sum(dscores, axis = 0)
+    H1_input[H1_input > 0] = 1
+    H1_input[H1_input < 0] = 0
+    dH1_input = H1_input * dH1_output
+    dW1 = np.dot(X.T, dH1_input)
+    db1 = 1 * np.sum(dH1_input, axis = 0)
+
+    grads['W1'] = dW1 / N + 2 * reg * W1
+    grads['W2'] = dW2 / N + 2 * reg * W2
+    grads['b1'] = db1 / N
+    grads['b2'] = db2 / N
+
     pass
     #############################################################################
     #                              END OF YOUR CODE                             #
