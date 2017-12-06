@@ -1,3 +1,3 @@
 # cs231_assignment
 
-There are three assignments here.
+There are codes for three assignments here.
