@@ -196,6 +196,10 @@ class TwoLayerNet(object):
       # TODO: Create a random minibatch of training data and labels, storing  #
       # them in X_batch and y_batch respectively.                             #
       #########################################################################
+      mask = np.random.choice(num_train, batch_size, replace=True)
+      X_batch = X[mask]
+      y_batch = y[mask]
+
       pass
       #########################################################################
       #                             END OF YOUR CODE                          #
@@ -211,7 +215,12 @@ class TwoLayerNet(object):
       # using stochastic gradient descent. You'll need to use the gradients   #
       # stored in the grads dictionary defined above.                         #
       #########################################################################
+      self.params['W1'] -= learning_rate * grads['W1']
+      self.params['W2'] -= learning_rate * grads['W2']
+      self.params['b1'] -= learning_rate * grads['b1']
+      self.params['b2'] -= learning_rate * grads['b2']
       pass
+
       #########################################################################
       #                             END OF YOUR CODE                          #
       #########################################################################
@@ -220,6 +229,7 @@ class TwoLayerNet(object):
         print('iteration %d / %d: loss %f' % (it, num_iters, loss))
 
       # Every epoch, check train and val accuracy and decay learning rate.
+      # It means check the train_num samples aleady
       if it % iterations_per_epoch == 0:
         # Check accuracy
         train_acc = (self.predict(X_batch) == y_batch).mean()
@@ -228,6 +238,8 @@ class TwoLayerNet(object):
         val_acc_history.append(val_acc)
 
         # Decay learning rate
+        # At the begining, we use a high learning rate, so the loss function will descend quickly
+        # Then, we make the learning rate lower
         learning_rate *= learning_rate_decay
 
     return {
@@ -256,6 +268,9 @@ class TwoLayerNet(object):
     ###########################################################################
     # TODO: Implement this function; it should be VERY simple!                #
     ###########################################################################
+    scores = self.loss(X)
+    y_pred = scores.argmax(scores, axis=1)
+
     pass
     ###########################################################################
     #                              END OF YOUR CODE                           #
