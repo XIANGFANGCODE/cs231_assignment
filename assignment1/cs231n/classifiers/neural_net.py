@@ -3,6 +3,7 @@ from __future__ import print_function
 import numpy as np
 import matplotlib.pyplot as plt
 from past.builtins import xrange
+import math
 
 class TwoLayerNet(object):
   """
@@ -37,9 +38,23 @@ class TwoLayerNet(object):
     """
     self.params = {}
     self.params['W1'] = std * np.random.randn(input_size, hidden_size)
-    self.params['b1'] = np.zeros(hidden_size)
     self.params['W2'] = std * np.random.randn(hidden_size, output_size)
+    #self.params['W1'] = np.random.randn(input_size, hidden_size) * math.sqrt(2.0 / input_size)
+    self.params['b1'] = np.zeros(hidden_size)
+    #self.params['W2'] = np.random.randn(hidden_size, output_size) * math.sqrt(2.0 / input_size)
     self.params['b2'] = np.zeros(output_size)
+
+    # Params for adam update
+    '''
+    self.params['m_for_W1'] = np.zeros((input_size, hidden_size))
+    self.params['v_for_W1'] = np.zeros((input_size, hidden_size))
+    self.params['m_for_W2'] = np.zeros((hidden_size, output_size))
+    self.params['v_for_W2'] = np.zeros((hidden_size, output_size))
+    self.params['m_for_b1'] = np.zeros(hidden_size)
+    self.params['v_for_b1'] = np.zeros(hidden_size)
+    self.params['m_for_b2'] = np.zeros(output_size)
+    self.params['v_for_b2'] = np.zeros(output_size)
+    '''
 
   def loss(self, X, y=None, reg=0.0):
     """
@@ -78,13 +93,19 @@ class TwoLayerNet(object):
     #############################################################################
     H1_input = np.dot(X, W1) + b1
     H1_output = np.maximum(0, H1_input)
+
+    # Dropout
+    # p = 0.5
+    # U1 = (np.random.rand(*H1_output.shape) < p) / p
+    # H1_output *= U1
+
     scores = np.dot(H1_output, W2) + b2
 
     pass
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
-    
+
     # If the targets are not given then jump out, we're done
     if y is None:
       return scores
@@ -114,7 +135,7 @@ class TwoLayerNet(object):
 
     # regularization
     loss /= N
-    loss += reg * np.sum(W1 * W1) +  reg * np.sum(W2 * W2)
+    loss += reg * np.sum(W1 * W1) + reg * np.sum(W2 * W2)
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
@@ -140,6 +161,10 @@ class TwoLayerNet(object):
     # Processing scores
     dW2 = np.dot(H1_output.T, dscores)
     dH1_output = np.dot(dscores, W2.T)
+
+    # Dropout
+    # dH1_output *= U1
+
     db2 = 1 * np.sum(dscores, axis = 0)
     H1_input[H1_input > 0] = 1
     H1_input[H1_input < 0] = 0
@@ -158,6 +183,19 @@ class TwoLayerNet(object):
     #############################################################################
 
     return loss, grads
+
+  def adam_update(self, m, v, x, dx, learning_rate):
+    """
+    Adam update algorithm used for update  hyper-parameters of neural network
+
+    """
+    eps = 1e-8
+    beta1 = 0.9
+    beta2 = 0.999
+    m = beta1 * m + (1 - beta1) * dx
+    v = beta2 * v + (1 - beta2) * (dx ** 2)
+    x -= learning_rate * m / (np.sqrt(v) + eps)
+    return m, v, x
 
   def train(self, X, y, X_val, y_val,
             learning_rate=1e-3, learning_rate_decay=0.95,
@@ -215,10 +253,27 @@ class TwoLayerNet(object):
       # using stochastic gradient descent. You'll need to use the gradients   #
       # stored in the grads dictionary defined above.                         #
       #########################################################################
+
       self.params['W1'] -= learning_rate * grads['W1']
       self.params['W2'] -= learning_rate * grads['W2']
       self.params['b1'] -= learning_rate * grads['b1']
       self.params['b2'] -= learning_rate * grads['b2']
+
+
+      # Adam update
+      '''
+      self.params['m_for_W1'], self.params['v_for_W1'],self.params['W1'] = self.adam_update(self.params['m_for_W1'],
+                                                                                            self.params['v_for_W1'],
+                                                                                            self.params['W1'],
+                                                                                            grads['W1'], learning_rate)
+      self.params['W2'] = self.adam_update(self.params['m_for_W2'], self.params['v_for_W2'], self.params['W2'],
+                                           grads['W2'], learning_rate)
+      self.params['b1'] = self.adam_update(self.params['m_for_b1'], self.params['v_for_b1'], self.params['b1'],
+                                           grads['b1'], learning_rate)
+      self.params['b2'] = self.adam_update(self.params['m_for_b2'], self.params['v_for_b2'], self.params['b2'],
+                                           grads['b2'], learning_rate)
+    '''
+
       pass
 
       #########################################################################
@@ -269,7 +324,7 @@ class TwoLayerNet(object):
     # TODO: Implement this function; it should be VERY simple!                #
     ###########################################################################
     scores = self.loss(X)
-    y_pred = scores.argmax(scores, axis=1)
+    y_pred = np.argmax(scores, axis=1)
 
     pass
     ###########################################################################
