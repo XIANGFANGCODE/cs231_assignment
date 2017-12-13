@@ -14,3 +14,7 @@ build
 # My configurations:
 db.ini
 deploy_key_rsa
+
+# TMP File
+*.idea
+*.ipynb_checkpoints
