@@ -1,11 +1,16 @@
 import numpy as np
 
-a = np.array(range(4)).reshape(2,2)
-print (a)
+#a = np.array(range(4)).reshape(2,2)
+#print (a)
+#print (a[-1])
 
+b = []
+c = [1,2]
+d = 3
+b.append(c)
+b.append(d)
 
-b=np.copy(a)
-
-b[0,1] = 122
 print(b)
-print(a)
+d = []
+c = None
+print(b)
