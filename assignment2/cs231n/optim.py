@@ -57,7 +57,7 @@ def sgd_momentum(w, dw, config=None):
     """
     if config is None: config = {}
     config.setdefault('learning_rate', 1e-2)
-    config.setdefault('momentum', 0.9)
+    config.setdefault('momentum', 0.9)  #usually, momentum set to one of  [0.5,0.9,0.95,0.99]
     v = config.get('velocity', np.zeros_like(w))
 
     next_w = None
@@ -65,6 +65,9 @@ def sgd_momentum(w, dw, config=None):
     # TODO: Implement the momentum update formula. Store the updated value in #
     # the next_w variable. You should also use and update the velocity v.     #
     ###########################################################################
+    v = config['momentum'] * v - config['learning_rate'] * dw
+    next_w = w + v
+
     pass
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -89,8 +92,8 @@ def rmsprop(x, dx, config=None):
     """
     if config is None: config = {}
     config.setdefault('learning_rate', 1e-2)
-    config.setdefault('decay_rate', 0.99)
-    config.setdefault('epsilon', 1e-8)
+    config.setdefault('decay_rate', 0.99)   # usually, set to one of [0.9,0.99,0.999]
+    config.setdefault('epsilon', 1e-8)  # usually, set to 1e-4 ~ 1e-8
     config.setdefault('cache', np.zeros_like(x))
 
     next_x = None
@@ -99,6 +102,9 @@ def rmsprop(x, dx, config=None):
     # in the next_x variable. Don't forget to update cache value stored in    #
     # config['cache'].                                                        #
     ###########################################################################
+    config['cache'] = config['decay_rate'] * config['cache'] + (1 - config['decay_rate']) * (dx ** 2)
+    next_x = x - config['learning_rate'] * dx / (np.sqrt(config['cache']) + config['epsilon'])
+
     pass
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -136,6 +142,14 @@ def adam(x, dx, config=None):
     # the next_x variable. Don't forget to update the m, v, and t variables   #
     # stored in config.                                                       #
     ###########################################################################
+    config['t'] += 1    # should look the paper
+    config['m'] = config['beta1'] * config['m'] + (1 - config['beta1']) * dx
+    config['v'] = config['beta2'] * config['v'] + (1 - config['beta2']) * (dx ** 2)
+    # Bias correction for the fact that m and v start at zero
+    first_unbias = config['m'] / (1 - config['beta1'] ** config['t'])
+    second_unbias = config['v'] / (1 - config['beta2'] ** config['t'])
+    next_x = x - config['learning_rate'] * first_unbias / (np.sqrt(second_unbias) + config['epsilon'])
+
     pass
     ###########################################################################
     #                             END OF YOUR CODE                            #

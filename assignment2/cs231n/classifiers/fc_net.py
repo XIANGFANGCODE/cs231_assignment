@@ -255,7 +255,6 @@ class FullyConnectedNet(object):
         # layer, etc.                                                              #
         ############################################################################
 
-        #{affine - [batch norm] - relu - [dropout]} x(L - 1) - affine - softmax
         # def affine_forward(x, w, b):
         # def relu_forward(x):
         # def softmax_loss(x, y):
@@ -298,14 +297,18 @@ class FullyConnectedNet(object):
         ############################################################################
         # def softmax_loss(x, y):
         loss, dx = softmax_loss(scores, y)
-        for i in range(self.num_layers):
-            w = 'W' + str(i+1)
+        for i in range(self.num_layers, 0, -1):
+            w = 'W' + str(i)
+            b = 'b' + str(i)
             loss += 0.5 * self.reg * np.sum(self.params[w] ** 2)
+            if i < self.num_layers:
+                dx = relu_backward(dx, relu_cache_list[i-1])
+            dx, grads[w], grads[b] = affine_backward(dx, affine_cache_list[i-1])
+            grads[w] += self.reg * self.params[w]
 
-        #for i in range(self.num_layers):
-        #    if i > 0:
-
-
+        # {affine - [batch norm] - relu - [dropout]} x(L - 1) - affine - softmax
+        # def relu_backward(dout, cache): return dx
+        # def affine_backward(dout, cache):   return dx, dw, db
 
         pass
         ############################################################################
