@@ -177,8 +177,8 @@ def batchnorm_forward(x, gamma, beta, bn_param):
     N, D = x.shape
     running_mean = bn_param.get('running_mean', np.zeros(D, dtype=x.dtype))
     running_var = bn_param.get('running_var', np.zeros(D, dtype=x.dtype))
-
     out, cache = None, None
+    sample_mean, sample_var, normalization_x = None, None, None
     if mode == 'train':
         #######################################################################
         # TODO: Implement the training-time forward pass for batch norm.      #
@@ -195,6 +195,14 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # variance, storing your result in the running_mean and running_var   #
         # variables.                                                          #
         #######################################################################
+        sample_mean = np.mean(x, axis=0)    # (D,)
+        sample_var = np.mean((x - sample_mean.reshape(1, D)) ** 2, axis=0)  # (D,)
+        running_mean = momentum * running_mean + (1 - momentum) * sample_mean
+        running_var = momentum * running_var + (1 - momentum) * sample_var
+        #normalization_x = (x - running_mean.reshape(-1, D)) / np.sqrt(running_var.reshape(-1, D) + eps)
+        normalization_x = (x - sample_mean.reshape(-1, D)) / np.sqrt(sample_var.reshape(-1, D) + eps)
+        out = gamma.reshape(-1, D) * normalization_x + beta.reshape(-1, D)
+
         pass
         #######################################################################
         #                           END OF YOUR CODE                          #
@@ -206,6 +214,8 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # then scale and shift the normalized data using gamma and beta.      #
         # Store the result in the out variable.                               #
         #######################################################################
+        normalization_x = (x - running_mean.reshape(-1, D)) / np.sqrt(running_var.reshape(-1, D) + eps)
+        out = gamma.reshape(-1, D) * normalization_x + beta.reshape(-1, D)
         pass
         #######################################################################
         #                          END OF YOUR CODE                           #
@@ -216,6 +226,7 @@ def batchnorm_forward(x, gamma, beta, bn_param):
     # Store the updated running means back into bn_param
     bn_param['running_mean'] = running_mean
     bn_param['running_var'] = running_var
+    cache = (x, gamma, beta, bn_param, sample_mean, sample_var, normalization_x)
 
     return out, cache
 
@@ -238,10 +249,32 @@ def batchnorm_backward(dout, cache):
     - dbeta: Gradient with respect to shift parameter beta, of shape (D,)
     """
     dx, dgamma, dbeta = None, None, None
+    x, gamma, beta, bn_param, sample_mean, sample_var, normalization_x = cache
+    N, D = x.shape
+    mode = bn_param['mode']
+    eps = bn_param['eps']
+    momentum = bn_param['momentum']
+    running_mean = bn_param['running_mean']
+    running_var = bn_param['running_var']
     ###########################################################################
     # TODO: Implement the backward pass for batch normalization. Store the    #
     # results in the dx, dgamma, and dbeta variables.                         #
     ###########################################################################
+    if mode == 'train':
+        dgamma = np.sum(normalization_x * dout, axis=0) #(D, )
+        dbeta = np.sum(dout, axis=0) #(D, )
+        dnormalization_x = gamma.reshape(-1, D) * dout #(N, D)
+        dx = dnormalization_x / np.sqrt(sample_var.reshape(-1, D) + eps) #(N, D)
+        dsample_mean = -np.sum(dnormalization_x, axis=0, keepdims=True) / np.sqrt(sample_var.reshape(-1, D) + eps) #(D, )
+        dsample_var = np.sum(-0.5 * (x - sample_mean.reshape(-1, D)) * dnormalization_x,axis=0, keepdims=True)/ np.sqrt((sample_var.reshape(-1, D) + eps) ** 3) #(N, D)
+        dx += 2 * (x - sample_mean.reshape(-1, D)) * dsample_var / N #(N, D)
+        dsample_mean += 
+
+    elif mode == 'test':
+
+    else:
+        raise ValueError('Invalid forward batchnorm mode "%s"' % mode)
+
     pass
     ###########################################################################
     #                             END OF YOUR CODE                            #
