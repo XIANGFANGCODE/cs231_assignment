@@ -226,7 +226,7 @@ def batchnorm_forward(x, gamma, beta, bn_param):
     # Store the updated running means back into bn_param
     bn_param['running_mean'] = running_mean
     bn_param['running_var'] = running_var
-    cache = (x, gamma, beta, bn_param, sample_mean, sample_var, normalization_x)
+    cache = (x, gamma, beta, bn_param, eps, sample_mean, sample_var, normalization_x)
 
     return out, cache
 
@@ -249,11 +249,9 @@ def batchnorm_backward(dout, cache):
     - dbeta: Gradient with respect to shift parameter beta, of shape (D,)
     """
     dx, dgamma, dbeta = None, None, None
-    x, gamma, beta, bn_param, sample_mean, sample_var, normalization_x = cache
+    x, gamma, beta, bn_param, eps, sample_mean, sample_var, normalization_x = cache
     N, D = x.shape
     mode = bn_param['mode']
-    eps = bn_param['eps']
-    momentum = bn_param['momentum']
     running_mean = bn_param['running_mean']
     running_var = bn_param['running_var']
     ###########################################################################
@@ -266,11 +264,16 @@ def batchnorm_backward(dout, cache):
         dnormalization_x = gamma.reshape(-1, D) * dout #(N, D)
         dx = dnormalization_x / np.sqrt(sample_var.reshape(-1, D) + eps) #(N, D)
         dsample_mean = -np.sum(dnormalization_x, axis=0, keepdims=True) / np.sqrt(sample_var.reshape(-1, D) + eps) #(D, )
-        dsample_var = np.sum(-0.5 * (x - sample_mean.reshape(-1, D)) * dnormalization_x,axis=0, keepdims=True)/ np.sqrt((sample_var.reshape(-1, D) + eps) ** 3) #(N, D)
-        dx += 2 * (x - sample_mean.reshape(-1, D)) * dsample_var / N #(N, D)
-        dsample_mean += 
+        dsample_var = np.sum(-0.5 * (x - sample_mean.reshape(-1, D)) * dnormalization_x,axis=0, keepdims=True)/ np.sqrt((sample_var.reshape(-1, D) + eps) ** 3) #(D, )
+        dx += 2 * (x - sample_mean.reshape(-1, D)) * dsample_var.reshape(-1, D) / N #(N, D)
+        dsample_mean += np.mean(-2 * (x - sample_mean.reshape(-1, D)) * dsample_var.reshape(-1, D), axis=0) #(D, )
+        dx += dsample_mean.reshape(-1, D) / N #(N, D)
 
     elif mode == 'test':
+        dgamma = np.sum(normalization_x * dout, axis=0) #(D, )
+        dbeta = np.sum(dout, axis=0) #(D, )
+        dnormalization_x = gamma.reshape(-1, D) * dout #(N, D)
+        dx = dnormalization_x / np.sqrt(running_var.reshape(-1, D) + eps)  # (N, D)
 
     else:
         raise ValueError('Invalid forward batchnorm mode "%s"' % mode)
@@ -297,6 +300,11 @@ def batchnorm_backward_alt(dout, cache):
     Inputs / outputs: Same as batchnorm_backward
     """
     dx, dgamma, dbeta = None, None, None
+    x, gamma, beta, bn_param, eps, sample_mean, sample_var, normalization_x = cache
+    N, D = x.shape
+    mode = bn_param['mode']
+    running_mean = bn_param['running_mean']
+    running_var = bn_param['running_var']
     ###########################################################################
     # TODO: Implement the backward pass for batch normalization. Store the    #
     # results in the dx, dgamma, and dbeta variables.                         #
@@ -305,6 +313,24 @@ def batchnorm_backward_alt(dout, cache):
     # should be able to compute gradients with respect to the inputs in a     #
     # single statement; our implementation fits on a single 80-character line.#
     ###########################################################################
+    if mode == 'train':
+        dgamma = np.sum(normalization_x * dout, axis=0) #(D, )
+        dbeta = np.sum(dout, axis=0) #(D, )
+        dnormalization_x = gamma.reshape(-1, D) * dout #(N, D)
+        dx = dnormalization_x / np.sqrt(sample_var.reshape(-1, D) + eps) #(N, D)
+        dsample_mean = -np.sum(dnormalization_x, axis=0, keepdims=True) / np.sqrt(sample_var.reshape(-1, D) + eps) #(D, )
+        dsample_var = np.sum(-0.5 * (x - sample_mean.reshape(-1, D)) * dnormalization_x,axis=0, keepdims=True)/ np.sqrt((sample_var.reshape(-1, D) + eps) ** 3) #(D, )
+        dx += 2 * (x - sample_mean.reshape(-1, D)) * dsample_var.reshape(-1, D) / N #(N, D)
+        dsample_mean += np.mean(-2 * (x - sample_mean.reshape(-1, D)) * dsample_var.reshape(-1, D), axis=0) #(D, )
+        dx += dsample_mean.reshape(-1, D) / N #(N, D)
+    elif mode == 'test':
+        dgamma = np.sum(normalization_x * dout, axis=0) #(D, )
+        dbeta = np.sum(dout, axis=0) #(D, )
+        dnormalization_x = gamma.reshape(-1, D) * dout #(N, D)
+        dx = dnormalization_x / np.sqrt(running_var.reshape(-1, D) + eps)  # (N, D)
+
+    else:
+        raise ValueError('Invalid forward batchnorm mode "%s"' % mode)
     pass
     ###########################################################################
     #                             END OF YOUR CODE                            #
