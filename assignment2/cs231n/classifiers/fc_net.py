@@ -256,14 +256,14 @@ class FullyConnectedNet(object):
         af_relu_cache_list = []
         af_bn_relu_cache_list = []
         af_cache = None
+        dropout_cache_list = []
 
         for i in range(self.num_layers):
             w = self.params['W' + str(i+1)]
             b = self.params['b' + str(i+1)]
             if i == 0:
                 out = X
-            #out, cache = affine_forward(out, self.params[w], self.params[b])
-            #affine_cache_list.append(cache)
+            #{affine - [batch norm] - relu - [dropout]} x (L - 1) - affine - softmax
             if i < self.num_layers - 1:
                 if self.use_batchnorm:
                     gamma = self.params['gamma' + str(i + 1)]
@@ -275,6 +275,11 @@ class FullyConnectedNet(object):
                 else:
                     out, cache = affine_relu_forward(out, w, b)
                     af_relu_cache_list.append(cache)
+
+                if self.use_dropout:
+                    out, cache = dropout_forward(out, self.dropout_param)
+                    dropout_cache_list.append(cache)
+
             else:
                 out, cache = affine_forward(out, w, b)
                 af_cache = cache
@@ -311,8 +316,9 @@ class FullyConnectedNet(object):
             beta = 'beta' + str(i)
             loss += 0.5 * self.reg * np.sum(self.params[w] ** 2)
             if i < self.num_layers:
+                if self.use_dropout:
+                    dx = dropout_backward(dx, dropout_cache_list[i-1])
                 if self.use_batchnorm:
-                # dx = relu_backward(dx, relu_cache_list[i-1])
                     dx, grads[w], grads[b], grads[gamma], grads[beta] = affine_batchnorm_relu_backward(dx, af_bn_relu_cache_list[i-1])
                 else:
                     dx, grads[w], grads[b] = affine_relu_backward(dx, af_relu_cache_list[i-1])
