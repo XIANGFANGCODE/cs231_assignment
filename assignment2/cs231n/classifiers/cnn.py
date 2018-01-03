@@ -48,6 +48,22 @@ class ThreeLayerConvNet(object):
         # hidden affine layer, and keys 'W3' and 'b3' for the weights and biases   #
         # of the output affine layer.                                              #
         ############################################################################
+
+        # network:  conv - relu - 2x2 max pool - affine - relu - affine - softmax
+        C, H, W = input_dim
+        self.params['W1'] = weight_scale * np.random.randn(num_filters, C, filter_size, filter_size)
+        self.params['b1'] = np.zeros(num_filters)
+
+        # use zeor pading, so  the input size will not change after conv layer
+        # after max pool, shape will be  (image_num,  num_filters , (H - 2) // 2 + 1 , (W - 2) // 2 + 1)
+        max_pool_out_dim = num_filters * ((H - 2) // 2 + 1) * ((W - 2) // 2 + 1)
+        self.params['W2'] = weight_scale * np.random.randn(max_pool_out_dim, hidden_dim)
+        self.params['b2'] = np.zeros(hidden_dim)
+
+        self.params['W3'] = weight_scale * np.random.randn(hidden_dim, num_classes)
+        self.params['b3'] = np.zeros(num_classes)
+
+
         pass
         ############################################################################
         #                             END OF YOUR CODE                             #
@@ -59,10 +75,24 @@ class ThreeLayerConvNet(object):
 
     def loss(self, X, y=None):
         """
-        Evaluate loss and gradient for the three-layer convolutional network.
+        Compute loss and gradient for a minibatch of data.
 
-        Input / output: Same API as TwoLayerNet in fc_net.py.
+        Inputs:
+        - X: Array of input data of shape (N, d_1, ..., d_k)
+        - y: Array of labels, of shape (N,). y[i] gives the label for X[i].
+
+        Returns:
+        If y is None, then run a test-time forward pass of the model and return:
+        - scores: Array of shape (N, C) giving classification scores, where
+          scores[i, c] is the classification score for X[i] and class c.
+
+        If y is not None, then run a training-time forward and backward pass and
+        return a tuple of:
+        - loss: Scalar value giving the loss
+        - grads: Dictionary with the same keys as self.params, mapping parameter
+          names to gradients of the loss with respect to those parameters.
         """
+
         W1, b1 = self.params['W1'], self.params['b1']
         W2, b2 = self.params['W2'], self.params['b2']
         W3, b3 = self.params['W3'], self.params['b3']
@@ -80,6 +110,13 @@ class ThreeLayerConvNet(object):
         # computing the class scores for X and storing them in the scores          #
         # variable.                                                                #
         ############################################################################
+        # network:  conv - relu - 2x2 max pool - affine - relu - affine - softmax
+
+        out, conv_relu_pool_forward_cache = conv_relu_pool_forward(X, W1, b1, conv_param, pool_param)
+        out, affine_relu_forward_cache = affine_relu_forward(out, W2, b2)
+        out, affine_forward_cache = affine_forward(out, W3, b3)
+        scores = out
+
         pass
         ############################################################################
         #                             END OF YOUR CODE                             #
@@ -95,6 +132,15 @@ class ThreeLayerConvNet(object):
         # data loss using softmax, and make sure that grads[k] holds the gradients #
         # for self.params[k]. Don't forget to add L2 regularization!               #
         ############################################################################
+        loss, dx = softmax_loss(scores, y)
+        loss = loss + 0.5 * self.reg * (np.sum(W1 * W1) + np.sum(W2 * W2) + np.sum(W3 * W3))
+        dx, grads['W3'], grads['b3'] = affine_backward(dx, affine_forward_cache)
+        dx, grads['W2'], grads['b2'] = affine_relu_backward(dx, affine_relu_forward_cache)
+        dx, grads['W1'], grads['b1'] = conv_relu_pool_backward(dx, conv_relu_pool_forward_cache)
+        grads['W1'] += self.reg * W1
+        grads['W2'] += self.reg * W2
+        grads['W3'] += self.reg * W3
+
         pass
         ############################################################################
         #                             END OF YOUR CODE                             #
