@@ -6,8 +6,5 @@ pad = 1
 A = np.pad(A,((pad,pad),(pad,pad)),'constant',constant_values = (0,0))
 print (A)
 
-b = np.where(A==np.max(A))
-
-print(b)
-print(A[b])
+print (A[:,:])
 
