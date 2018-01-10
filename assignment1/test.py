@@ -1,5 +1,11 @@
+#import numpy as np
+import tensorflow as tf
 import numpy as np
+import math
+import timeit
 
-print (4//2)
+a = np.random.randn(2,3,4)
+print(a)
 
-print (7//2)
+x_shape = tf.get_shape
+print(x_shape)
