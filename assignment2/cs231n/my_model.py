@@ -1,8 +1,8 @@
-import numpy as np
 import tensorflow as tf
 
-def model_fn(features, labels, mode, params):
-'''
+
+def cnn_fn(features, labels, mode, params):
+    """
     Logic to do the following:
     1. Configure the model via TensorFlow operations
     2. Define the loss function for training/evaluation
@@ -23,20 +23,19 @@ def model_fn(features, labels, mode, params):
     picture (1, 1 , Filter#), which is then reshaped into a (Filter#) vector. This is used in Google's Inception
     Network (See Table 1 for their architecture)
     Dropout: use dropout after affine/dense layer, dropout rate is 0.4
-'''
+    """
+
     N = params.get('N', 1)
     M = params.get('M', 1)
-    n_layer_list = []
-    m_layer_list = []
-    input_layer = features
+    input_layer = features["x"]
     filters_num = params.get('filters_num', 64)
-    kernel_size = params.get('kernel_size', [3,3])
-    pool_size = params.get('pool_size', [2,2])
-    strides = params.get('strides', [2,2])
-    dense_size = params.get('dense_size',1024)
-    dropout_rate = params.get('dropout_rate',0.4)
-    class_num = params.get('class_num',10)
-
+    kernel_size = params.get('kernel_size', [3, 3])
+    pool_size = params.get('pool_size', [2, 2])
+    strides = params.get('strides', [2, 2])
+    dense_size = params.get('dense_size', 1024)
+    dropout_rate = params.get('dropout_rate', 0.4)
+    class_num = params.get('class_num', 10)
+    learning_rate = params.get('learning_rate', 5e-4)
 
     # [conv-relu-conv-relu-pool]xN
     for i in range(N):
@@ -55,7 +54,6 @@ def model_fn(features, labels, mode, params):
             kernel_size=kernel_size,
             padding="same",
             activation=tf.nn.relu)
-
         # Max pool layer
         pool1 = tf.layers.max_pooling2d(inputs=conv2, pool_size=pool_size, strides=strides)
 
@@ -96,10 +94,13 @@ def model_fn(features, labels, mode, params):
 
     # Configure the Training Op (for TRAIN mode)
     if mode == tf.estimator.ModeKeys.TRAIN:
-        optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.001)
+        optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
         train_op = optimizer.minimize(
             loss=loss,
             global_step=tf.train.get_global_step())
         return tf.estimator.EstimatorSpec(mode=mode, loss=loss, train_op=train_op)
 
-    return EstimatorSpec(mode, predictions, loss, train_op, eval_metric_ops)
+    # Add evaluation metrics (for EVAL mode)
+    eval_metric_ops = {
+        "accuracy": tf.metrics.accuracy(labels=labels, predictions=predictions["classes"])}
+    return tf.estimator.EstimatorSpec(mode=mode, loss=loss, eval_metric_ops=eval_metric_ops)
