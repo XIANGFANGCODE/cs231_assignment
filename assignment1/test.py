@@ -4,8 +4,9 @@ import numpy as np
 import math
 import timeit
 
-a = np.random.randn(2,3,4)
-print(a)
-
-x_shape = tf.get_shape
-print(x_shape)
+c = tf.constant([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
+print(c)
+s = c.shape
+print(c.shape)
+l = s.as_list()
+print(l)
