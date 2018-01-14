@@ -1,6 +1,5 @@
 import tensorflow as tf
 
-
 def cnn_fn(features, labels, mode, params):
     """
     Logic to do the following:
