@@ -149,18 +149,19 @@ def rnn_backward(dh, cache):
     x, prev_h, Wx, Wh, b, ht = cache[0]
     _, D = x.shape
     dx = np.zeros((N, T, D))
-    dh0 = np.zeros_like(prev_h)
     dWx = np.zeros_like(Wx)
     dWh = np.zeros_like(Wh)
     db = np.zeros_like(b)
+    _dnext_h = np.zeros_like(prev_h)
     for i in range(T-1, -1, -1):
-        print(i)
-        _dx, _dprev_h, _dWx, _dWh, _db = rnn_step_backward(dh[:, i, :], cache[i])
+        # Note that at a step h generate h+1 and the output
+        _dx, _dprev_h, _dWx, _dWh, _db = rnn_step_backward(dh[:, i, :] + _dnext_h, cache[i])
         dx[:, i, :] = _dx
-        dh0 += _dprev_h
         dWx += _dWx
         dWh += _dWh
         db += _db
+        _dnext_h = _dprev_h
+    dh0 = _dnext_h
     pass
     ##############################################################################
     #                               END OF YOUR CODE                             #
@@ -176,7 +177,7 @@ def word_embedding_forward(x, W):
 
     Inputs:
     - x: Integer array of shape (N, T) giving indices of words. Each element idx
-      of x muxt be in the range 0 <= idx < V.
+      of x must be in the range 0 <= idx < V.
     - W: Weight matrix of shape (V, D) giving word vectors for all words.
 
     Returns a tuple of:
@@ -189,6 +190,20 @@ def word_embedding_forward(x, W):
     #                                                                            #
     # HINT: This can be done in one line using NumPy's array indexing.           #
     ##############################################################################
+    # Word embedding traning input is one hot
+    """
+    N, T = x.shape
+    V, D = W.shape
+    x_one_hot = np.zeros((N, T, V))
+    for i in range(N):
+        for j in range(T):
+            x_one_hot[i, j, x[i, j]] = 1
+    out = np.dot(x_one_hot, W)
+    """
+    out = W[x, :]
+    cache = (W, x)
+
+
     pass
     ##############################################################################
     #                               END OF YOUR CODE                             #
@@ -218,6 +233,22 @@ def word_embedding_backward(dout, cache):
     # Note that Words can appear more than once in a sequence.                   #
     # HINT: Look up the function np.add.at                                       #
     ##############################################################################
+    """
+    W, x = cache
+    N, T = x.shape
+    V, D = W.shape
+    x_one_hot = np.zeros((N, T, V))
+    for i in range(N):
+        for j in range(T):
+            x_one_hot[i, j, x[i, j]] = 1
+    #out = np.dot(x_one_hot, W)
+    dW = np.dot(x_one_hot.transpose(2, 0, 1).reshape(V, -1), dout.reshape(-1, D))
+    """
+    # out = W[x, :]
+    W, x = cache
+    dW = np.zeros_like(W)  #(V, D)  dout: (N, T, D)  x(N, T, V)
+    np.add.at(dW, x, dout)
+
     pass
     ##############################################################################
     #                               END OF YOUR CODE                             #
