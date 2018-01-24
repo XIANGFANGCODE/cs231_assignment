@@ -70,7 +70,8 @@ def rnn_step_backward(dnext_h, cache):
 
     #ht = np.dot(x, Wx) + np.dot(prev_h, Wh) + b
     #next_h = 2 / (1 + np.e ** (-2 * ht)) - 1
-    dht = 4 * (np.e ** (-2 * ht)) * dnext_h / ((1 + np.e ** (-2 * ht)) ** 2) #(N, H)
+    #dht = 4 * (np.e ** (-2 * ht)) * dnext_h / ((1 + np.e ** (-2 * ht)) ** 2) #(N, H)
+    dht = 4 * dnext_h / (2 + np.e ** (-2 * ht) + np.e ** (2 * ht))
     dx = np.dot(dht, Wx.T)
     dWx = np.dot(x.T, dht)
     dprev_h = np.dot(dht, Wh.T)

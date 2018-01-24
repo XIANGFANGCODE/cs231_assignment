@@ -65,6 +65,7 @@ class CaptioningRNN(object):
         self.params['Wh'] /= np.sqrt(hidden_dim)
         self.params['b'] = np.zeros(dim_mul * hidden_dim)
 
+
         # Initialize output to vocab weights
         self.params['W_vocab'] = np.random.randn(hidden_dim, vocab_size)
         self.params['W_vocab'] /= np.sqrt(hidden_dim)
@@ -137,6 +138,20 @@ class CaptioningRNN(object):
         # defined above to store loss and gradients; grads[k] should give the      #
         # gradients for self.params[k].                                            #
         ############################################################################
+        af_out, af_cache = affine_forward(features, W_proj, b_proj)
+        we_out, we_cache = word_embedding_forward(captions_in, W_embed)
+        if self.cell_type == 'rnn':
+            h, rf_cache = rnn_forward(we_out, af_out, Wx, Wh, b)
+        else:
+            pass
+        ta_out, ta_cache = temporal_affine_forward(h, W_vocab, b_vocab)
+        loss, dx = temporal_softmax_loss(ta_out, captions_out, mask)
+
+        dh, grads['W_vocab'], grads['b_vocab'] = temporal_affine_backward(dx, ta_cache)
+        dwe_out, daf_out, grads['Wx'], grads['Wh'], grads['b'] = rnn_backward(dh, rf_cache)
+        grads['W_embed'] = word_embedding_backward(dwe_out, we_cache)
+        dfeatures, grads['W_proj'], grads['b_proj'] = affine_backward(daf_out, af_cache)
+
         pass
         ############################################################################
         #                             END OF YOUR CODE                             #
