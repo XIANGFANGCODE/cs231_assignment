@@ -184,7 +184,7 @@ class CaptioningRNN(object):
           where each element is an integer in the range [0, V). The first element
           of captions should be the first sampled word, not the <START> token.
         """
-        N = features.shape[0]
+        N = features.shape[0]   # mini batch size
         captions = self._null * np.ones((N, max_length), dtype=np.int32)
 
         # Unpack parameters
@@ -214,6 +214,25 @@ class CaptioningRNN(object):
         # functions; you'll need to call rnn_step_forward or lstm_step_forward in #
         # a loop.                                                                 #
         ###########################################################################
+
+
+        # max_length words / max_length timestep
+        captions_in = self._null * np.ones((N, max_length), dtype=np.int32)
+        captions_in[:, 0] = self._start
+        af_out, _ = affine_forward(features, W_proj, b_proj)
+        for i in range(max_length):
+            we_out, _ = word_embedding_forward(captions_in, W_embed)
+            if self.cell_type == 'rnn':
+                next_h, _ = rnn_step_forward(we_out[:, i, :], af_out, Wx, Wh, b)
+            else:
+                pass
+            ta_out, _ = affine_forward(next_h, W_vocab, b_vocab) # (N, v)
+            scores = np.argmax(ta_out, axis=1)
+            captions[:, i] = scores
+            if i < max_length - 1:
+                captions_in[:, i+1] = scores
+            af_out = next_h
+
         pass
         ############################################################################
         #                             END OF YOUR CODE                             #

@@ -4,5 +4,7 @@ import numpy as np
 import math
 import timeit
 
-f = np.can_cast(np.float64, np.float32)
-print (f)
+f = np.random.randn(2,3)
+print(f)
+
+print(np.argmax(f, axis=1))
