@@ -279,9 +279,9 @@ def derivatives_sigmoid(x):
     """
     sigmoid
 
-    函数：f(z) = 1 / (1 + exp( − z))
+    f(z) = 1 / (1 + exp( − z))
 
-    导数：f(z)' = f(z)(1 − f(z))
+    f(z)' = f(z)(1 − f(z))
     """
     return sigmoid(x) * (1 - sigmoid(x))
 
@@ -289,9 +289,9 @@ def derivatives_tanh(x):
     """
     tanh
 
-    函数：f(z) = tanh(z)
+    f(z) = tanh(z)
 
-    导数：f(z)' = 1 − (f(z))**2
+    f(z)' = 1 − (f(z))**2
     """
     return 1 - (tanh(x)) ** 2
 
@@ -437,7 +437,7 @@ def lstm_forward(x, h0, Wx, Wh, b):
 
 def lstm_backward(dh, cache):
     """
-    Backward pass for an LSTM over an entire sequence of data.]
+    Backward pass for an LSTM over an entire sequence of data.
 
     Inputs:
     - dh: Upstream gradients of hidden states, of shape (N, T, H)
@@ -455,6 +455,21 @@ def lstm_backward(dh, cache):
     # TODO: Implement the backward pass for an LSTM over an entire timeseries.  #
     # You should use the lstm_step_backward function that you just defined.     #
     #############################################################################
+    N, T, H = dh.shape
+    x, prev_h, prev_c, Wx, Wh, b, next_h, next_c, g, o, f, i, a = cache[0]
+    _, D = x.shape
+    dc = np.zeros((N, H))
+    dx = np.zeros((N, T, D))
+    dWh = np.zeros((H, 4*H))
+    dWx = np.zeros((D, 4*H))
+    db = np.zeros((4*H))
+    dprev_h = np.zeros((N, H))
+    for i in range(T-1, -1, -1):
+        dx[:, i, :], dprev_h, dc, _dWx, _dWh, _db = lstm_step_backward(dh[:, i, :] + dprev_h, dc, cache[i])
+        dWh += _dWh
+        dWx += _dWx
+        db += _db
+    dh0 = dprev_h
     pass
     ##############################################################################
     #                               END OF YOUR CODE                             #

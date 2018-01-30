@@ -143,12 +143,16 @@ class CaptioningRNN(object):
         if self.cell_type == 'rnn':
             h, rf_cache = rnn_forward(we_out, af_out, Wx, Wh, b)
         else:
+            h, rf_cache =lstm_forward(we_out, af_out, Wx, Wh, b)
             pass
         ta_out, ta_cache = temporal_affine_forward(h, W_vocab, b_vocab)
         loss, dx = temporal_softmax_loss(ta_out, captions_out, mask)
 
         dh, grads['W_vocab'], grads['b_vocab'] = temporal_affine_backward(dx, ta_cache)
-        dwe_out, daf_out, grads['Wx'], grads['Wh'], grads['b'] = rnn_backward(dh, rf_cache)
+        if self.cell_type == 'rnn':
+            dwe_out, daf_out, grads['Wx'], grads['Wh'], grads['b'] = rnn_backward(dh, rf_cache)
+        else:
+            dwe_out, daf_out, grads['Wx'], grads['Wh'], grads['b'] = lstm_backward(dh, rf_cache)
         grads['W_embed'] = word_embedding_backward(dwe_out, we_cache)
         dfeatures, grads['W_proj'], grads['b_proj'] = affine_backward(daf_out, af_cache)
 
@@ -215,16 +219,20 @@ class CaptioningRNN(object):
         # a loop.                                                                 #
         ###########################################################################
 
-
         # max_length words / max_length timestep
         captions_in = self._null * np.ones((N, max_length), dtype=np.int32)
         captions_in[:, 0] = self._start
         af_out, _ = affine_forward(features, W_proj, b_proj)
+        next_c = None
+        next_h = None
         for i in range(max_length):
             we_out, _ = word_embedding_forward(captions_in, W_embed)
             if self.cell_type == 'rnn':
                 next_h, _ = rnn_step_forward(we_out[:, i, :], af_out, Wx, Wh, b)
             else:
+                if next_c is None:
+                    next_c = np.zeros_like(af_out)
+                next_h, next_c, _ = lstm_step_forward(we_out[:, i, :], af_out, next_c, Wx, Wh, b)
                 pass
             ta_out, _ = affine_forward(next_h, W_vocab, b_vocab) # (N, v)
             scores = np.argmax(ta_out, axis=1)
