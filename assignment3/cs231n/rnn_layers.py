@@ -271,6 +271,30 @@ def sigmoid(x):
     top[neg_mask] = z[neg_mask]
     return top / (1 + z)
 
+def tanh(x):
+    return 2 * sigmoid(2 * x) - 1
+
+
+def derivatives_sigmoid(x):
+    """
+    sigmoid
+
+    函数：f(z) = 1 / (1 + exp( − z))
+
+    导数：f(z)' = f(z)(1 − f(z))
+    """
+    return sigmoid(x) * (1 - sigmoid(x))
+
+def derivatives_tanh(x):
+    """
+    tanh
+
+    函数：f(z) = tanh(z)
+
+    导数：f(z)' = 1 − (f(z))**2
+    """
+    return 1 - (tanh(x)) ** 2
+
 
 def lstm_step_forward(x, prev_h, prev_c, Wx, Wh, b):
     """
@@ -297,6 +321,17 @@ def lstm_step_forward(x, prev_h, prev_c, Wx, Wh, b):
     # TODO: Implement the forward pass for a single timestep of an LSTM.        #
     # You may want to use the numerically stable sigmoid implementation above.  #
     #############################################################################
+    N, H = prev_h.shape
+    a = np.dot(x, Wx) + np.dot(prev_h, Wh) + b  # (N, 4H)
+    i = sigmoid(a[:, :H])
+    f = sigmoid(a[:, H:2*H])
+    o = sigmoid(a[:, 2*H:3*H])
+    #g = 2 * sigmoid(2 * a[:, 3*H:]) - 1
+    g = tanh(a[:, 3*H:])
+    next_c = f * prev_c + i * g
+    #next_h = o * (2 * sigmoid(2 * next_c) - 1)
+    next_h = o * tanh(next_c)
+    cache = x, prev_h, prev_c, Wx, Wh, b, next_h, next_c, g, o, f, i, a
     pass
     ##############################################################################
     #                               END OF YOUR CODE                             #
@@ -329,6 +364,26 @@ def lstm_step_backward(dnext_h, dnext_c, cache):
     # HINT: For sigmoid and tanh you can compute local derivatives in terms of  #
     # the output value from the nonlinearity.                                   #
     #############################################################################
+    x, prev_h, prev_c, Wx, Wh, b, next_h, next_c, g, o, f, i, a = cache
+    # dnext_h, dnext_c
+    N, H = dnext_h.shape
+    da = np.zeros((N, 4*H))
+    dnext_c += o * derivatives_tanh(next_c) * dnext_h   #(N,H)
+    do = tanh(next_c) * dnext_h     # (N,H)
+    df = prev_c * dnext_c           # (N,H)
+    dprev_c = f * dnext_c           # (N,H)
+    di = g * dnext_c                # (N,H)
+    dg = i * dnext_c                # (N,H)
+    da[:, 3*H:] = derivatives_tanh(a[:, 3*H:]) * dg             # (N,H)
+    da[:, 2*H:3*H] = derivatives_sigmoid(a[:, 2*H:3*H]) * do    # (N,H)
+    da[:, H:2*H] = derivatives_sigmoid(a[:, H:2*H]) * df        # (N,H)
+    da[:, :H] = derivatives_sigmoid(a[:, :H]) * di              # (N,H)
+    # da(N, 4H) Wx(D, 4H) x(N, D) Wh(H, 4H)
+    dx = np.dot(da, Wx.T)   # (N,D)
+    dWx = np.dot(x.T, da)   # (D,4H)
+    dprev_h = np.dot(da, Wh.T)  # (N,H)
+    dWh = np.dot(prev_h.T, da)  # (H,4H)
+    db = np.sum(da, axis=0)
     pass
     ##############################################################################
     #                               END OF YOUR CODE                             #
@@ -364,11 +419,19 @@ def lstm_forward(x, h0, Wx, Wh, b):
     # TODO: Implement the forward pass for an LSTM over an entire timeseries.   #
     # You should use the lstm_step_forward function that you just defined.      #
     #############################################################################
+    N, T, D = x.shape
+    _, H = h0.shape
+    h = np.zeros((N, T, H))
+    next_c = np.zeros((N, H))
+    cache = list()
+    for i in range(T):
+        h0, next_c, lstm_cache = lstm_step_forward(x[:, i, :], h0, next_c, Wx, Wh, b)
+        h[:, i, :] = h0
+        cache.append(lstm_cache)
     pass
     ##############################################################################
     #                               END OF YOUR CODE                             #
     ##############################################################################
-
     return h, cache
 
 
