@@ -1,10 +1,17 @@
+#-*- coding:utf-8 -*-
+import copy
+
 # -*- coding:utf-8 -*-
-# class TreeNode:
-#     def __init__(self, x):
-#         self.val = x
-#         self.left = None
-#         self.right = None
+class RandomListNode:
+    def __init__(self, x):
+        self.label = x
+        self.next = None
+        self.random = None
 class Solution:
-    # 返回二维列表，内部每个列表表示找到的路径
-    def FindPath(self, root, expectNumber):
-        # write code here
+    # 返回 RandomListNode
+    def Clone(self, pHead):
+        if pHead is None: return None
+        root = copy.deepcopy(pHead)
+        return root
+
+
